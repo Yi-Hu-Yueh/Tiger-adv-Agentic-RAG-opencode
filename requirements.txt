@@ -1,0 +1,17 @@
+# Tiger-adv-Agentic-RAG-opencode — direct dependencies only (built from scratch)
+# Python 3.11.3 verified. No pygame / no unused deps.
+fastapi==0.118.0
+uvicorn==0.37.0
+pydantic==2.11.7
+qdrant-client==1.18.0
+langchain-core==1.4.9
+langchain-ollama==1.1.0
+langchain-text-splitters==1.1.2
+langgraph==1.0.4
+sentence-transformers==5.1.0
+streamlit==1.49.1
+requests==2.32.5
+pytest==8.4.2
+pytest-asyncio==1.1.0
+tqdm==4.68.2
+httpx==0.28.1

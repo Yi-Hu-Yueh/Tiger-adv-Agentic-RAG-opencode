@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+runtime/qdrant/qdrant.exe
+runtime/qdrant/*.log
+runtime/qdrant/*.pid
+data/qdrant-server/
+*.snapshot
+*.mp4
+.env

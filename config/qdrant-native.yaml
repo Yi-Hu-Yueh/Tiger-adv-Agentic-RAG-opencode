@@ -1,0 +1,11 @@
+storage:
+  storage_path: "D:/0TIGER/6months/PythonAPIDevelopment/opencode-prjs/Tiger-adv-Agentic-RAG-opencode/data/qdrant-server"
+  snapshots_path: "D:/0TIGER/6months/PythonAPIDevelopment/opencode-prjs/Tiger-adv-Agentic-RAG-opencode/data/qdrant-server/snapshots"
+
+service:
+  host: "127.0.0.1"
+  http_port: 6333
+  grpc_port: 6334
+
+cluster:
+  enabled: false
