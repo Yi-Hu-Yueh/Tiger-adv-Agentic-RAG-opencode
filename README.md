@@ -125,6 +125,45 @@ ollama pull gemma4:e4b
 ollama pull bge-m3
 ```
 
+## Snapshot Install（Google Drive 快照還原）
+
+向量快照：https://drive.google.com/drive/folders/116xGk8y56ij00SOSUboJmNAC7NXqmEeL
+
+不要直接把snapshot upload到Windows Native Qdrant（實測`applied_seq.json Access denied os error 5`）。可靠流程：WSL2 :7333還原 → server-to-server搬到Windows :6333。
+
+```powershell
+# 1. 下載Drive全部檔案到
+# D:\0TIGER\6months\Qdrant-Google-Backup\
+#   benchmark_crag_task_1_2_bge_m3-*.snapshot
+#   benchmark_crag_task_1_2_medium_bge_m3-*.snapshot
+#   benchmark_crag_task_1_2_smoke_bge_m3-*.snapshot
+#   enterprise_rag-*.snapshot
+#   manifest.json
+
+# 2. WSL2臨時Qdrant :7333
+wsl -d Ubuntu -- bash -lc 'mkdir -p ~/qdrant-temp/bin ~/qdrant-temp/storage; cd ~/qdrant-temp/bin; curl -L -o qdrant.tar.gz "https://github.com/qdrant/qdrant/releases/download/v1.18.2/qdrant-x86_64-unknown-linux-musl.tar.gz"; tar -xzf qdrant.tar.gz; chmod +x qdrant'
+wsl -d Ubuntu -- bash -lc 'nohup env QDRANT__SERVICE__HOST=0.0.0.0 QDRANT__SERVICE__HTTP_PORT=7333 QDRANT__SERVICE__GRPC_PORT=7334 QDRANT__STORAGE__STORAGE_PATH="$HOME/qdrant-temp/storage" "$HOME/qdrant-temp/bin/qdrant" > "$HOME/qdrant-temp/qdrant.log" 2>&1 & sleep 5'
+Invoke-RestMethod http://127.0.0.1:7333/healthz
+
+# 3. 還原4個snapshot到WSL
+$RestoreDir = "D:\0TIGER\6months\Qdrant-Google-Backup"
+$Manifest = Get-Content "$RestoreDir\manifest.json" -Raw | ConvertFrom-Json
+foreach ($item in $Manifest) {
+  curl.exe --fail-with-body -X POST "http://127.0.0.1:7333/collections/$($item.collection)/snapshots/upload?wait=true&priority=snapshot" -F "snapshot=@$(Join-Path $RestoreDir $item.snapshot)"
+}
+
+# 4. 搬到Windows正式庫 :6333
+powershell -ExecutionPolicy Bypass -File .\scripts\start_qdrant_native.ps1
+python .\scripts\migrate_qdrant_server_to_server.py --source-url http://127.0.0.1:7333 --target-url http://127.0.0.1:6333
+# 4個COLLECTION皆PASS：259752 / 19416 / 2530 / 225336 = 507,034
+
+# 5. 啟API驗證
+$env:QDRANT_MODE="server"; $env:QDRANT_URL="http://127.0.0.1:6333"
+python -m uvicorn app:app --host 127.0.0.1 --port 8000
+Invoke-RestMethod http://127.0.0.1:8000/health
+```
+
+完成後日常只需Native Qdrant :6333 + Ollama + FastAPI，不必重做WSL還原。
 ## Run
 
 ```powershell
@@ -196,42 +235,4 @@ python -m pytest tests/integration/test_api.py tests/integration/test_langgraph.
 
 MIT License.
 
-## Snapshot Install（Google Drive 快照還原）
 
-向量快照：https://drive.google.com/drive/folders/116xGk8y56ij00SOSUboJmNAC7NXqmEeL
-
-不要直接把snapshot upload到Windows Native Qdrant（實測`applied_seq.json Access denied os error 5`）。可靠流程：WSL2 :7333還原 → server-to-server搬到Windows :6333。
-
-```powershell
-# 1. 下載Drive全部檔案到
-# D:\0TIGER\6months\Qdrant-Google-Backup\
-#   benchmark_crag_task_1_2_bge_m3-*.snapshot
-#   benchmark_crag_task_1_2_medium_bge_m3-*.snapshot
-#   benchmark_crag_task_1_2_smoke_bge_m3-*.snapshot
-#   enterprise_rag-*.snapshot
-#   manifest.json
-
-# 2. WSL2臨時Qdrant :7333
-wsl -d Ubuntu -- bash -lc 'mkdir -p ~/qdrant-temp/bin ~/qdrant-temp/storage; cd ~/qdrant-temp/bin; curl -L -o qdrant.tar.gz "https://github.com/qdrant/qdrant/releases/download/v1.18.2/qdrant-x86_64-unknown-linux-musl.tar.gz"; tar -xzf qdrant.tar.gz; chmod +x qdrant'
-wsl -d Ubuntu -- bash -lc 'nohup env QDRANT__SERVICE__HOST=0.0.0.0 QDRANT__SERVICE__HTTP_PORT=7333 QDRANT__SERVICE__GRPC_PORT=7334 QDRANT__STORAGE__STORAGE_PATH="$HOME/qdrant-temp/storage" "$HOME/qdrant-temp/bin/qdrant" > "$HOME/qdrant-temp/qdrant.log" 2>&1 & sleep 5'
-Invoke-RestMethod http://127.0.0.1:7333/healthz
-
-# 3. 還原4個snapshot到WSL
-$RestoreDir = "D:\0TIGER\6months\Qdrant-Google-Backup"
-$Manifest = Get-Content "$RestoreDir\manifest.json" -Raw | ConvertFrom-Json
-foreach ($item in $Manifest) {
-  curl.exe --fail-with-body -X POST "http://127.0.0.1:7333/collections/$($item.collection)/snapshots/upload?wait=true&priority=snapshot" -F "snapshot=@$(Join-Path $RestoreDir $item.snapshot)"
-}
-
-# 4. 搬到Windows正式庫 :6333
-powershell -ExecutionPolicy Bypass -File .\scripts\start_qdrant_native.ps1
-python .\scripts\migrate_qdrant_server_to_server.py --source-url http://127.0.0.1:7333 --target-url http://127.0.0.1:6333
-# 4個COLLECTION皆PASS：259752 / 19416 / 2530 / 225336 = 507,034
-
-# 5. 啟API驗證
-$env:QDRANT_MODE="server"; $env:QDRANT_URL="http://127.0.0.1:6333"
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-Invoke-RestMethod http://127.0.0.1:8000/health
-```
-
-完成後日常只需Native Qdrant :6333 + Ollama + FastAPI，不必重做WSL還原。
