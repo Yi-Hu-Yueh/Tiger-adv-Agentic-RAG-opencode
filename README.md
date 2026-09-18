@@ -9,12 +9,12 @@ Enterprise Agentic-RAG：FastAPI + 自製 GraphWorkflow + Ollama + Native Qdrant
 
 ## 測試
 - "question": "what is langgraph?"
-(./question.png)
+![Question](./question.png)
 - AI
 '''
 LangGraph is described as a low-level orchestration framework and runtime for building, managing, and deploying long-running, stateful agents. It is also an open-source Python framework for creating stateful, multi-actor AI agent applications.\n\nIt provides the following capabilities:\n*   Durable execution, streaming, human-in-the-loop interactions, persistence, memory, and time-travel debugging.\n*   A graph-based execution model (Bulk Synchronous Parallel via the Pregel engine) where user-defined nodes process shared state through typed channels.\n\nUsers are recommended to use LangGraph when they have advanced needs such as:\n*   Designing custom agent workflows with explicit graph-based control flow.\n*   Adding durable execution so agents survive failures and restarts.\n*   Implementing human-in-the-loop with interrupts and approval steps.\n*   Building multi-agent systems with shared state across agents.\n\nThe framework supports two authoring APIs: the declarative StateGraph API and the functional API
 '''
-(./AI.png)
+![AI](./AI.png)
 
 ## Features
 
