@@ -233,6 +233,37 @@ python -m pytest tests/integration/test_api.py tests/integration/test_langgraph.
 - `/chat/stream` 為分段串流，非token streaming。
 - `data/qdrant-server`、`runtime/qdrant/qdrant.exe`、snapshots不進Git。
 
+## Custom Data Import（匯入自己的資料）
+
+程式：`scripts/build_index.py`（掃描 → 切分 → Ollama bge-m3向量化 → Qdrant upsert → count驗證）。
+支援：`.md/.mdx/.txt/.py/.ipynb/.json/.yaml/.yml`。Payload定約：`repo, source, relative_path, filename, extension, chunk_index, text`。
+
+```powershell
+# Qdrant須先啟動
+powershell -ExecutionPolicy Bypass -File .\scripts\start_qdrant_native.ps1
+
+# 1. 準備文件，放到例如 data/my_docs/
+
+# 2. 匯入新collection（不存在會自動建立1024維Cosine）
+python scripts/build_index.py --source data/my_docs --collection my_docs --repo my_docs
+# 成功顯示：COLLECTION: my_docs POINTS=<N> CHUNKS_ADDED=<N> STATUS: PASS
+
+# 3. 追加到現有collection
+python scripts/build_index.py --source data/my_docs --collection enterprise_rag --repo my_docs --append
+
+# 4. 打掉重建
+python scripts/build_index.py --source data/my_docs --collection my_docs --repo my_docs --recreate
+
+# 5. 切換API使用新庫
+$env:QDRANT_COLLECTION="my_docs"
+$env:QDRANT_MODE="server"; $env:QDRANT_URL="http://127.0.0.1:6333"
+python -m uvicorn app:app --host 127.0.0.1 --port 8000
+# /chat 問新文件內容，citations出現新repo/path即成功
+```
+
+參數：`--batch-size`（預設64）、`--chunk-size`（預設1000）、`--chunk-overlap`（預設200）。
+`data/sample_docs/`內有兩個可直接試跑的範例。
+
 MIT License.
 
 
